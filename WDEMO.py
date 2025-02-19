@@ -77,10 +77,10 @@ def main():
             col1, col2 = st.columns(2)
             with col1:
                 st.subheader("Original Watermark")
-                st.image(graywm, use_column_width=True)
+                st.image(graywm, use_container_width=True)
             with col2:
                 st.subheader("Original Cover Image")
-                st.image(grayc, use_column_width=True)
+                st.image(grayc, use_container_width=True)
             
             if st.button("Apply Watermark"):
                 with st.spinner("Processing watermark..."):
@@ -208,7 +208,7 @@ def main():
                     
                     # Display results
                     st.subheader("Watermarked Image")
-                    st.image(IMG.astype(np.uint8), use_column_width=True)
+                    st.image(IMG.astype(np.uint8), use_container_width=True)
                     st.success(f"PSNR Value: {PSNR:.2f} dB")
                     
                     # Count smooth blocks
