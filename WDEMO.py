@@ -9,6 +9,12 @@ import math
 
 def convert_to_grayscale(img_array):
     """Convert image array to grayscale, handling both RGB and grayscale inputs"""
+    # First resize the image to 256x256
+    img_pil = Image.fromarray(img_array)
+    img_pil = img_pil.resize((256, 256), Image.Resampling.LANCZOS)
+    img_array = np.array(img_pil)
+    
+    # Then convert to grayscale if needed
     if len(img_array.shape) == 3:  # If image is RGB
         return cv2.cvtColor(img_array, cv2.COLOR_RGB2GRAY)
     else:  # If image is already grayscale
@@ -68,10 +74,9 @@ def main():
             cover_array = np.array(cover_img)
             grayc = convert_to_grayscale(cover_array)
             
-            # Ensure images are 256x256
-            if graywm.shape != (256, 256) or grayc.shape != (256, 256):
-                st.error("Both images must be 256x256 pixels. Please resize your images.")
-                return
+            # Normalize pixel values to 0-255 range
+            graywm = ((graywm - graywm.min()) * (255.0 / (graywm.max() - graywm.min()))).astype(np.uint8)
+            grayc = ((grayc - grayc.min()) * (255.0 / (grayc.max() - grayc.min()))).astype(np.uint8)
             
             # Display original images
             col1, col2 = st.columns(2)
@@ -123,14 +128,14 @@ def main():
                     for i in range(256):
                         k = 0
                         for j in range(256):
-                            exp2bit[l,k] = format(((AwF[i,j])),'08b')[0:2]
-                            exp2bit[l,k+1] = format(((AwF[i,j])),'08b')[2:4]
-                            exp2bit[l+1,k] = format(((AwF[i,j])),'08b')[4:6]
-                            exp2bit[l+1,k+1] = format(((AwF[i,j])),'08b')[6:8]
+                            exp2bit[l,k] = format(int(abs(AwF[i,j])),'08b')[0:2]
+                            exp2bit[l,k+1] = format(int(abs(AwF[i,j])),'08b')[2:4]
+                            exp2bit[l+1,k] = format(int(abs(AwF[i,j])),'08b')[4:6]
+                            exp2bit[l+1,k+1] = format(int(abs(AwF[i,j])),'08b')[6:8]
                             k += 2
                         l += 2
                     
-                    # Chaos matrix generation
+                    # Rest of the processing code remains the same...
                     n = 9
                     size = 2**n
                     M = np.zeros((size,size), dtype=object)
@@ -181,7 +186,7 @@ def main():
                     imCbinary = np.zeros([512,512], dtype=object)
                     for i in range(512):
                         for j in range(512):
-                            imCbinary[i,j] = format(grayc[i,j], '08b')
+                            imCbinary[i,j] = format(grayc[i//2,j//2], '08b')
                     
                     # Embedding process
                     key = np.zeros((512,512), dtype=object)
@@ -200,7 +205,7 @@ def main():
                     MSEi = 0
                     for i in range(512):
                         for j in range(512):
-                            MSEi += (grayc[i,j]-IMG[i,j])**2
+                            MSEi += (grayc[i//2,j//2]-IMG[i,j])**2
                     gl = 512*512
                     MSE = MSEi/gl
                     MAX = 255
