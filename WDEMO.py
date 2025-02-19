@@ -7,19 +7,6 @@ from scipy import linalg
 import random
 import math
 
-def convert_to_grayscale(img_array):
-    """Convert image array to grayscale, handling both RGB and grayscale inputs"""
-    # First resize the image to 256x256
-    img_pil = Image.fromarray(img_array)
-    img_pil = img_pil.resize((256, 256), Image.Resampling.LANCZOS)
-    img_array = np.array(img_pil)
-    
-    # Then convert to grayscale if needed
-    if len(img_array.shape) == 3:  # If image is RGB
-        return cv2.cvtColor(img_array, cv2.COLOR_RGB2GRAY)
-    else:  # If image is already grayscale
-        return img_array
-
 def tent(x):
     d = random.uniform(0, 1)
     if x >= 0 and x < d:
@@ -67,16 +54,14 @@ def main():
             # Process watermark image
             watermark_img = Image.open(watermark_file)
             watermark_array = np.array(watermark_img)
-            graywm = convert_to_grayscale(watermark_array)
+            WM = cv2.cvtColor(watermark_array, cv2.COLOR_RGB2BGR)
+            graywm = cv2.cvtColor(WM, cv2.COLOR_BGR2GRAY)
             
             # Process cover image
             cover_img = Image.open(cover_file)
             cover_array = np.array(cover_img)
-            grayc = convert_to_grayscale(cover_array)
-            
-            # Normalize pixel values to 0-255 range
-            graywm = ((graywm - graywm.min()) * (255.0 / (graywm.max() - graywm.min()))).astype(np.uint8)
-            grayc = ((grayc - grayc.min()) * (255.0 / (grayc.max() - grayc.min()))).astype(np.uint8)
+            im2 = cv2.cvtColor(cover_array, cv2.COLOR_RGB2BGR)
+            grayc = cv2.cvtColor(im2, cv2.COLOR_BGR2GRAY)
             
             # Display original images
             col1, col2 = st.columns(2)
@@ -123,19 +108,24 @@ def main():
                             Awf[i,j] = Aw[i,j] - AwF[i,j]
                     
                     # Binary conversion and expansion
+                    wmbinary = np.zeros([256,256], dtype=object)
+                    for i in range(256):
+                        for j in range(256):
+                            wmbinary[i,j] = format((AwF[i,j]), '08b')
+                    
                     exp2bit = np.zeros([512,512], dtype=object)
                     l = 0
                     for i in range(256):
                         k = 0
                         for j in range(256):
-                            exp2bit[l,k] = format(int(abs(AwF[i,j])),'08b')[0:2]
-                            exp2bit[l,k+1] = format(int(abs(AwF[i,j])),'08b')[2:4]
-                            exp2bit[l+1,k] = format(int(abs(AwF[i,j])),'08b')[4:6]
-                            exp2bit[l+1,k+1] = format(int(abs(AwF[i,j])),'08b')[6:8]
+                            exp2bit[l,k] = format((AwF[i,j]), '08b')[0:2]
+                            exp2bit[l,k+1] = format((AwF[i,j]), '08b')[2:4]
+                            exp2bit[l+1,k] = format((AwF[i,j]), '08b')[4:6]
+                            exp2bit[l+1,k+1] = format((AwF[i,j]), '08b')[6:8]
                             k += 2
                         l += 2
                     
-                    # Rest of the processing code remains the same...
+                    # Chaos matrix generation
                     n = 9
                     size = 2**n
                     M = np.zeros((size,size), dtype=object)
@@ -161,6 +151,7 @@ def main():
                     # Calculate pixel difference matrix
                     CM = np.zeros((256,256))
                     l = 0
+                    x = []
                     for i in range(256):
                         k = 0
                         for j in range(256):
@@ -190,6 +181,7 @@ def main():
                     
                     # Embedding process
                     key = np.zeros((512,512), dtype=object)
+                    h = np.copy(imCbinary)
                     for i in range(512):
                         for j in range(512):
                             key[i,j] = CNOT(imCbinary[i,j][4], EX[i,j][1])
