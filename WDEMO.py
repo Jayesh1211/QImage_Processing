@@ -1,7 +1,6 @@
 import streamlit as st
 import numpy as np
 import cv2
-from PIL import Image
 import random
 import math
 from scipy import linalg
@@ -144,132 +143,107 @@ def calculate_psnr(original, watermarked):
     psnr = 20 * math.log10(max_pixel / math.sqrt(mse))
     return psnr
 
+def extract_watermark(cover_gray_512, key, imCbinary, codem):
+    a = (512, 512)
+    KY = np.copy(key)
+    imp = np.zeros(a, dtype=object)
+
+    for i in range(512):
+        for j in range(512):
+            imp[i, j] = CNOT(imCbinary[i, j][3], imCbinary[i, j][7]) + CNOT(imCbinary[i, j][4], KY[i, j])
+
+    # Preparing chaos matrix for extraction
+    ab = (512, 512)
+    CME = np.zeros(ab, dtype=object)
+    varx = codem
+
+    for j in range(512):
+        for i in range(512):
+            x = varx
+            y = tent(x, 1)  # Assuming d=1 for tent function
+            varx = y
+            CME[i][j] = decimalToBinary((math.ceil(varx * (10 ** 9))) % 4)
+
+    IMB = np.copy(imp)
+
+    for i in range(len(CME)):
+        for j in range(len(CME)):
+            for k in range(2):
+                if CME[i, j][k] == '1':
+                    l = list(IMB[i, j])
+                    l[k] = NOT(l[k])
+                    IMB[i, j] = "".join(l)
+
+    # IMB is the scrambled watermarked image
+    ab = (256, 256)
+    imb = np.zeros(ab, dtype=object)
+    l = 0
+
+    for i in range(256):
+        k = 0
+        for j in range(256):
+            imb[i, j] = IMB[l, k] + IMB[l, k + 1] + IMB[l + 1, k] + IMB[l + 1, k + 1]
+            k += 2
+        l += 2
+
+    lx = (256, 256)
+    IMGx = np.zeros(lx)
+
+    for i in range(256):
+        for j in range(256):
+            IMGx[i, j] = int(imb[i, j], 2)
+
+    return IMGx
 
 def main():
-
     st.title("Digital Image Watermarking")
-
     st.write("Select a cover image and a watermark to embed.")
-
     
-
     # Dropdown for selecting cover images
-
     cover_image_options = [
-
         "australia.png",
-
         "Boat.png",
-
         "Butterfly.jpg",
-
         "casa.png",
-
         "fachada.png",
-
         "owl.png"
-
     ]
-
     
-
     watermark_image_options = [
-
-        "Watermark_1.jpg",
-
+        "Watermark_1.png",
         "watermark_2.png",
-
         "watermark_3.png"
-
     ]
-
     
-
     selected_cover_image = st.selectbox("Choose a cover image", cover_image_options)
-
     selected_watermark_image = st.selectbox("Choose a watermark image", watermark_image_options)
-
     
-
     if selected_cover_image and selected_watermark_image:
-
         try:
-
             # Load images from the specified folders
-
             cover_img_path = f"IMAGES/{selected_cover_image}"
-
             watermark_img_path = f"watermarks/{selected_watermark_image}"
-
             
-
             cover_img = cv2.imread(cover_img_path)
-
             watermark_img = cv2.imread(watermark_img_path)
-
             
-
             # Convert to grayscale
-
             cover_gray = convert_to_grayscale(cover_img)
-
             watermark_gray = convert_to_grayscale(watermark_img)
-
             
-
             # Resize watermark to 256x256 and cover to 512x512
-
             watermark_gray = rescale_image(watermark_gray, (256, 256))
-
             cover_gray = rescale_image(cover_gray, (512, 512))
-
             
-
             # Display original images
-
             col1, col2 = st.columns(2)
-
             with col1:
-
                 st.subheader("Cover Image (512x512)")
-
                 st.image(cover_gray, use_container_width=True)
-
             
-
             with col2:
-
                 st.subheader("Watermark (256x256)")
-
                 st.image(watermark_gray, use_container_width=True)
-
-            
-
-            if st.button("Embed Watermark"):
-
-                with st.spinner("Processing..."):
-
-                    watermarked_img, key = embed_watermark(watermark_gray, cover_gray)
-
-                    
-
-                    if watermarked_img is not None:
-
-                        psnr = calculate_psnr(cover_gray, watermarked_img)
-
-                        
-
-                        st.subheader("Watermarked Image")
-
-                        st.image(watermarked_img.astype(np.uint8), use_container_width=True)
-
-                        
-
-                        if psnr is not None:
-
-                            st.write(f"PSNR: {psnr:.4f} dB")
-
-
             
             if st.button("Embed Watermark"):
                 with st.spinner("Processing..."):
@@ -283,6 +257,19 @@ def main():
                         
                         if psnr is not None:
                             st.write(f"PSNR: {psnr:.4f} dB")
+
+            if st.button("Extract Watermark"):
+                with st.spinner("Extracting..."):
+                    imCbinary = np.zeros([512, 512], dtype=object)
+
+                    for i in range(512):
+                        for j in range(512):
+                            imCbinary[i, j] = format(cover_gray[i, j], '08b')
+
+                    extracted_watermark = extract_watermark(cover_gray, key, imCbinary, codem)
+
+                    st.subheader("Extracted Watermark")
+                    st.image(extracted_watermark.astype(np.uint8), use_container_width=True)
         
         except Exception as e:
             st.error(f"An error occurred: {str(e)}")
