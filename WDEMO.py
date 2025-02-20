@@ -210,7 +210,7 @@ def main():
     ]
     
     watermark_image_options = [
-        "Watermark_1.png",
+        "Watermark_1.jpg",
         "watermark_2.png",
         "watermark_3.png"
     ]
