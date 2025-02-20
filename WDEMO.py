@@ -146,37 +146,101 @@ def calculate_psnr(original, watermarked):
 
 
 def main():
-    st.title("A Novel Two-Step Hybrid Quantum Watermarking Technique")
-    st.write("Upload a cover image (512x512) and a watermark to embed.")
+
+    st.title("Digital Image Watermarking")
+
+    st.write("Select a cover image and a watermark to embed.")
+
     
-    cover_file = st.file_uploader("Choose a cover image", type=['png', 'jpg', 'jpeg'])
-    watermark_file = st.file_uploader("Choose a watermark image", type=['png', 'jpg', 'jpeg'])
+
+    # Dropdown for selecting cover images
+
+    cover_image_options = [
+
+        "australia.png",
+
+        "Boat.png",
+
+        "Butterfly.jpg",
+
+        "casa.png",
+
+        "fachada.png",
+
+        "owl.png"
+
+    ]
+
     
-    if cover_file and watermark_file:
+
+    watermark_image_options = [
+
+        "Watermark_1.png",
+
+        "watermark_2.png",
+
+        "watermark_3.png"
+
+    ]
+
+    
+
+    selected_cover_image = st.selectbox("Choose a cover image", cover_image_options)
+
+    selected_watermark_image = st.selectbox("Choose a watermark image", watermark_image_options)
+
+    
+
+    if selected_cover_image and selected_watermark_image:
+
         try:
-            # Read images
-            cover_bytes = np.asarray(bytearray(cover_file.read()), dtype=np.uint8)
-            watermark_bytes = np.asarray(bytearray(watermark_file.read()), dtype=np.uint8)
+
+            # Load images from the specified folders
+
+            cover_img_path = f"IMAGES/{selected_cover_image}"
+
+            watermark_img_path = f"watermarks/{selected_watermark_image}"
+
             
-            cover_img = cv2.imdecode(cover_bytes, cv2.IMREAD_COLOR)
-            watermark_img = cv2.imdecode(watermark_bytes, cv2.IMREAD_COLOR)
+
+            cover_img = cv2.imread(cover_img_path)
+
+            watermark_img = cv2.imread(watermark_img_path)
+
             
+
             # Convert to grayscale
+
             cover_gray = convert_to_grayscale(cover_img)
+
             watermark_gray = convert_to_grayscale(watermark_img)
+
             
+
             # Resize watermark to 256x256 and cover to 512x512
+
             watermark_gray = rescale_image(watermark_gray, (256, 256))
+
             cover_gray = rescale_image(cover_gray, (512, 512))
+
             
+
             # Display original images
+
             col1, col2 = st.columns(2)
+
             with col1:
+
                 st.subheader("Cover Image (512x512)")
+
                 st.image(cover_gray, use_container_width=True)
+
             
+
             with col2:
+
                 st.subheader("Watermark (256x256)")
+
                 st.image(watermark_gray, use_container_width=True)
             
             if st.button("Embed Watermark"):
