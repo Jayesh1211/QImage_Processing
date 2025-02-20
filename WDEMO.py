@@ -146,7 +146,7 @@ def calculate_psnr(original, watermarked):
 
 
 def main():
-    st.title("Digital Image Watermarking")
+    st.title("A Novel Two-Step Hybrid Quantum Watermarking Technique")
     st.write("Upload a cover image (512x512) and a watermark to embed.")
     
     cover_file = st.file_uploader("Choose a cover image", type=['png', 'jpg', 'jpeg'])
