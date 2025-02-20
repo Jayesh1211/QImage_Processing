@@ -14,7 +14,10 @@ def rescale_image(input_image, size=(256, 256)):
 
 # Function to convert image to grayscale
 def convert_to_grayscale(image):
-    return cv2.cvtColor(np.array(image), cv2.COLOR_BGR2GRAY)
+    # Convert to RGB if the image is in a single channel
+    if image.mode == 'L':
+        image = image.convert('RGB')
+    return cv2.cvtColor(np.array(image), cv2.COLOR_RGB2GRAY)
 
 # Function to display images
 def display_image(image, title):
