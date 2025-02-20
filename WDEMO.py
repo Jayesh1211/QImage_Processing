@@ -1,174 +1,178 @@
-# -*- coding: utf-8 -*-
+import streamlit as st
 import numpy as np
 import cv2
 from PIL import Image
-import streamlit as st
-from scipy import linalg
 import random
 import math
+from scipy import linalg
+import io
 
-# Function to rescale images
-def rescale_image(input_image, size=(256, 256)):
-    img_rescaled = input_image.resize(size, Image.Resampling.LANCZOS)
-    return img_rescaled
-
-# Function to convert image to grayscale
 def convert_to_grayscale(image):
-    # Convert to RGB if the image is in a single channel
-    if image.mode == 'L':
-        image = image.convert('RGB')
-    return cv2.cvtColor(np.array(image), cv2.COLOR_RGB2GRAY)
+    return cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
 
-# Function to display images
-def display_image(image, title):
-    st.image(image, caption=title, use_column_width=True)
+def rescale_image(img, size=(256, 256)):
+    return cv2.resize(img, size, interpolation=cv2.INTER_LANCZOS4)
 
-# Function to perform SVD
-def perform_svd(image):
-    A = np.copy(image)
-    Uw, Sw, Vw = linalg.svd(A, full_matrices=True)
-    return Uw, Sw, Vw
+def tent(x, d):
+    if 0 <= x < d:
+        return x/d
+    elif d <= x < 1:
+        return (1-x)/(1-d)
+    return 0
 
-# Function to generate chaos matrix
-def generate_chaos_matrix(n):
-    k = 2 ** n
-    M = np.zeros((k, k), dtype=object)
-    codem = random.uniform(0, 1)
-    var = codem
-    for j in range(k):
-        for i in range(k):
-            x = var
-            y = tent(x)
-            var = y
-            M[i][j] = decimalToBinary((math.ceil(var * (10 ** 9))) % 4)
-    return M
-
-# Tent function for chaos generation
-def tent(x):
-    d = random.uniform(0, 1)
-    if x >= 0 and x < d:
-        return x / d
-    elif x >= d and x < 1:
-        return (1 - x) / (1 - d)
-
-# Function to convert decimal to binary
 def decimalToBinary(n):
     return "{0:02b}".format(int(n))
 
-# Function to apply CNOT operation
-def CNOT(x, y):
-    if x == "1":
-        return NOT(y)
-    return y
-
-# Function to apply NOT operation
 def NOT(x):
     return "1" if x == "0" else "0"
 
-# Main Streamlit app
+def CNOT(x, y):
+    return NOT(y) if x == "1" else y
+
+def generate_chaos_matrix(size, seed):
+    M = np.zeros((size, size), dtype=object)
+    var = seed
+    d = random.uniform(0, 1)
+    
+    for j in range(size):
+        for i in range(size):
+            x = var
+            y = tent(x, d)
+            var = y
+            M[i][j] = decimalToBinary((math.ceil(var*(10**9)))%4)
+    return M
+
+def process_watermark(watermark_img, cover_img):
+    # SVD Process
+    A = np.copy(watermark_img)
+    I = np.copy(cover_img)
+    
+    Uw, Sw, Vw = linalg.svd(A, full_matrices=True)
+    Uc, Sc, Vc = linalg.svd(I, full_matrices=True)
+    
+    k = (256, 256)
+    Swm = np.zeros(k)
+    Scm = np.zeros(k)
+    for i in range(256):
+        Swm[i,i] = Sw[i]
+        Scm[i,i] = Sc[i]
+    
+    Awa = np.dot(Uw, Swm)
+    
+    Scmp = np.zeros(k)
+    alpha = 0.002
+    for i in range(256):
+        for j in range(256):
+            Scmp[i,j] = Scm[i,j] + alpha*Awa[i,j]
+    
+    Aw = np.dot(Uc, Scmp)
+    Aw = np.dot(Aw, Vc)
+    
+    Awf = np.zeros(k)
+    AwF = np.zeros(k, dtype=object)
+    for i in range(256):
+        for j in range(256):
+            AwF[i,j] = int(np.floor(Aw[i,j]))
+            Awf[i,j] = Aw[i,j] - AwF[i,j]
+    
+    return AwF
+
+def embed_watermark(watermark_gray, cover_gray):
+    # Process watermark
+    AwF = process_watermark(watermark_gray, cover_gray)
+    
+    # Generate expanded bit matrix
+    exp2bit = np.zeros([512,512], dtype=object)
+    l = 0
+    for i in range(256):
+        k = 0
+        for j in range(256):
+            exp2bit[l,k] = format(((AwF[i,j])),'08b')[0:2]
+            exp2bit[l,k+1] = format(((AwF[i,j])),'08b')[2:4]
+            exp2bit[l+1,k] = format(((AwF[i,j])),'08b')[4:6]
+            exp2bit[l+1,k+1] = format(((AwF[i,j])),'08b')[6:8]
+            k+=2
+        l+=2
+    
+    # Generate chaos matrix
+    M = generate_chaos_matrix(512, random.uniform(0,1))
+    
+    # Apply CNOT operation
+    EX = np.copy(exp2bit)
+    for i in range(len(M)):
+        for j in range(len(M)):
+            for k in range(2):
+                if M[i,j][k]=='1':
+                    l = list(EX[i,j])
+                    l[k] = NOT(l[k])
+                    EX[i,j] = "".join(l)
+    
+    # Convert cover image to binary
+    imCbinary = np.zeros([512,512], dtype=object)
+    for i in range(512):
+        for j in range(512):
+            imCbinary[i,j] = format(cover_gray[i,j], '08b')
+    
+    # Embedding process
+    key = np.zeros((512,512), dtype=object)
+    for i in range(512):
+        for j in range(512):
+            key[i,j] = CNOT(imCbinary[i,j][4], EX[i,j][1])
+            imCbinary[i,j] = imCbinary[i,j][:7] + CNOT(imCbinary[i,j][3], EX[i,j][0])
+    
+    # Convert back to image
+    IMG = np.zeros((512,512))
+    for i in range(512):
+        for j in range(512):
+            IMG[i,j] = int(imCbinary[i,j], 2)
+    
+    return IMG, key
+
+def calculate_psnr(original, watermarked):
+    mse = np.mean((original - watermarked) ** 2)
+    if mse == 0:
+        return float('inf')
+    max_pixel = 255.0
+    psnr = 20 * math.log10(max_pixel / math.sqrt(mse))
+    return psnr
+
 def main():
-    st.title("Watermarking Application")
+    st.title("Digital Image Watermarking")
+    st.write("Upload a cover image and a watermark to embed.")
     
-    # Sidebar for file uploads
-    st.sidebar.header("Upload Images")
-    watermark_file = st.sidebar.file_uploader("Upload Watermark Image", type=["png", "jpg", "jpeg"])
-    cover_file = st.sidebar.file_uploader("Upload Cover Image", type=["png", "jpg", "jpeg"])
+    cover_file = st.file_uploader("Choose a cover image", type=['png', 'jpg', 'jpeg'])
+    watermark_file = st.file_uploader("Choose a watermark image", type=['png', 'jpg', 'jpeg'])
     
-    if watermark_file and cover_file:
-        # Load and process watermark image
-        WM = Image.open(watermark_file)
-        graywm = convert_to_grayscale(WM)
-        display_image(graywm, "Grayscale Watermark")
+    if cover_file and watermark_file:
+        # Read and process cover image
+        cover_bytes = np.asarray(bytearray(cover_file.read()), dtype=np.uint8)
+        cover_img = cv2.imdecode(cover_bytes, cv2.IMREAD_COLOR)
+        cover_gray = convert_to_grayscale(cover_img)
+        cover_gray = rescale_image(cover_gray)
         
-        # Load and process cover image
-        CP = Image.open(cover_file)
-        graycp = convert_to_grayscale(CP)
-        display_image(graycp, "Grayscale Cover Image")
+        # Read and process watermark image
+        watermark_bytes = np.asarray(bytearray(watermark_file.read()), dtype=np.uint8)
+        watermark_img = cv2.imdecode(watermark_bytes, cv2.IMREAD_COLOR)
+        watermark_gray = convert_to_grayscale(watermark_img)
+        watermark_gray = rescale_image(watermark_gray)
         
-        # Rescale images
-        rescaled_WM = rescale_image(WM)
-        rescaled_CP = rescale_image(CP)
+        col1, col2 = st.columns(2)
+        with col1:
+            st.subheader("Cover Image")
+            st.image(cover_gray, use_column_width=True)
         
-        # Perform SVD on watermark and cover images
-        Uw, Sw, Vw = perform_svd(graywm)
-        Uc, Sc, Vc = perform_svd(graycp)
-
-        # Create matrices for watermark and cover
-        k = (256, 256)
-        Swm = np.zeros(k)
-        Scm = np.zeros(k)
-        for i in range(256):
-            Swm[i, i] = Sw[i]
-            Scm[i, i] = Sc[i]
-
-        # Generate the watermarked image
-        alpha = 0.002
-        Awa = np.dot(Uw, Swm)
-        Scmp = Scm + alpha * Awa
-        Aw = np.dot(Uc, Scmp)
-        AwF = np.floor(Aw).astype(int)
-
-        # Convert pixel values into 8-bit string
-        wmbinary = np.zeros([256, 256], dtype=object)
-        for i in range(256):
-            for j in range(256):
-                wmbinary[i, j] = format(AwF[i, j], '08b')
-
-        # Expand image according to protocol
-        exp2bit = np.zeros([512, 512], dtype=object)
-        l = 0
-        for i in range(256):
-            k = 0
-            for j in range(256):
-                exp2bit[l, k] = format(AwF[i, j], '08b')[0:2]
-                exp2bit[l, k + 1] = format(AwF[i, j], '08b')[2:4]
-                exp2bit[l + 1, k] = format(AwF[i, j], '08b')[4:6]
-                exp2bit[l + 1, k + 1] = format(AwF[i, j], '08b')[6:8]
-                k += 2
-            l += 2
-
-        # Generate chaos matrix
-        n = 9
-        M = generate_chaos_matrix(n)
-
-        # Scrambling the image
-        EX = np.copy(exp2bit)
-        for i in range(len(M)):
-            for j in range(len(M)):
-                for k in range(2):
-                    if M[i, j][k] == '1':
-                        l = list(EX[i, j])
-                        l[k] = NOT(l[k])
-                        EX[i, j] = "".join(l)
-
-        # Embedding process
-        imCbinary = np.zeros([512, 512], dtype=object)
-        for i in range(512):
-            for j in range(512):
-                imCbinary[i, j] = format(graycp[i, j], '08b')
-
-        # Embedding starts
-        key = np.zeros((512, 512), dtype=object)
-        for i in range(512):
-            for j in range(512):
-                key[i, j] = CNOT(imCbinary[i, j][4], EX[i, j][1])
-                imCbinary[i, j] = imCbinary[i, j][:7] + CNOT(imCbinary[i, j][3], EX[i, j][0])
-
-        # Final image after embedding
-        IMG = np.zeros((512, 512))
-        for i in range(512):
-            for j in range(512):
-                IMG[i, j] = int(imCbinary[i, j], 2)
-
-        # Display the final watermarked image
-        st.write("Pixel value of embedded image:")
-        st.image(IMG, caption="Embedded Image", use_column_width=True)
-
-        # Calculate PSNR
-        MSEi = np.mean((graycp - IMG) ** 2)
-        MAX = 255
-        PSNR = 10 * math.log10(MAX ** 2 / MSEi)
-        st.write("The obtained PSNR value is:", PSNR)
+        with col2:
+            st.subheader("Watermark")
+            st.image(watermark_gray, use_column_width=True)
+        
+        if st.button("Embed Watermark"):
+            watermarked_img, key = embed_watermark(watermark_gray, cover_gray)
+            
+            psnr = calculate_psnr(cover_gray, watermarked_img)
+            
+            st.subheader("Watermarked Image")
+            st.image(watermarked_img.astype(np.uint8), use_column_width=True)
+            st.write(f"PSNR: {psnr:.2f} dB")
 
 if __name__ == "__main__":
     main()
