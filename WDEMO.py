@@ -151,8 +151,6 @@ def main():
 
     st.write("Select a cover image and a watermark to embed.")
 
-    
-
     # Dropdown for selecting cover images
 
     cover_image_options = [
@@ -175,7 +173,7 @@ def main():
 
     watermark_image_options = [
 
-        "Watermark_1.png",
+        "Watermark_1.jpg",
 
         "watermark_2.png",
 
