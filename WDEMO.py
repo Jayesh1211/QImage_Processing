@@ -135,7 +135,7 @@ def embed_watermark(watermark_gray, cover_gray_512):
                 IMG[i,j] = 0
     
     return IMG, key
-
+    
 def calculate_psnr(original, watermarked):
     mse = np.mean((original - watermarked) ** 2)
     if mse == 0:
@@ -143,6 +143,10 @@ def calculate_psnr(original, watermarked):
     max_pixel = 255.0
     psnr = 20 * math.log10(max_pixel / math.sqrt(mse))
     return psnr
+
+# In the main() function, replace the PSNR display line with:
+if psnr is not None:
+    st.write(f"PSNR: {psnr:.4f} dB")
 
 def main():
     st.title("Digital Image Watermarking")
