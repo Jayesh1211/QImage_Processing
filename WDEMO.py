@@ -144,9 +144,6 @@ def calculate_psnr(original, watermarked):
     psnr = 20 * math.log10(max_pixel / math.sqrt(mse))
     return psnr
 
-# In the main() function, replace the PSNR display line with:
-if psnr is not None:
-    st.write(f"PSNR: {psnr:.4f} dB")
 
 def main():
     st.title("Digital Image Watermarking")
