@@ -185,77 +185,89 @@ def main():
 
     
 
-    # File uploader for custom images
+    selected_cover_image = st.selectbox("Choose a cover image", cover_image_options)
 
-    cover_file = st.file_uploader("Choose a cover image (or select from dropdown)", type=['png', 'jpg', 'jpeg'])
-
-    watermark_file = st.file_uploader("Choose a watermark image (or select from dropdown)", type=['png', 'jpg', 'jpeg'])
+    selected_watermark_image = st.selectbox("Choose a watermark image", watermark_image_options)
 
     
 
-    selected_cover_image = st.selectbox("Choose a cover image from predefined options", cover_image_options)
+    if selected_cover_image and selected_watermark_image:
 
-    selected_watermark_image = st.selectbox("Choose a watermark image from predefined options", watermark_image_options)
+        try:
 
-    
+            # Load images from the specified folders
 
-    if cover_file is not None:
+            cover_img_path = f"IMAGES/{selected_cover_image}"
 
-        cover_bytes = np.asarray(bytearray(cover_file.read()), dtype=np.uint8)
+            watermark_img_path = f"watermarks/{selected_watermark_image}"
 
-        cover_img = cv2.imdecode(cover_bytes, cv2.IMREAD_COLOR)
+            
 
-    else:
+            cover_img = cv2.imread(cover_img_path)
 
-        cover_img = cv2.imread(f"IMAGES/{selected_cover_image}")
+            watermark_img = cv2.imread(watermark_img_path)
 
+            
 
-    if watermark_file is not None:
+            # Convert to grayscale
 
-        watermark_bytes = np.asarray(bytearray(watermark_file.read()), dtype=np.uint8)
+            cover_gray = convert_to_grayscale(cover_img)
 
-        watermark_img = cv2.imdecode(watermark_bytes, cv2.IMREAD_COLOR)
+            watermark_gray = convert_to_grayscale(watermark_img)
 
-    else:
+            
 
-        watermark_img = cv2.imread(f"watermarks/{selected_watermark_image}")
+            # Resize watermark to 256x256 and cover to 512x512
 
+            watermark_gray = rescale_image(watermark_gray, (256, 256))
 
-    if cover_img is not None and watermark_img is not None:
+            cover_gray = rescale_image(cover_gray, (512, 512))
 
-        # Convert to grayscale
+            
 
-        cover_gray = convert_to_grayscale(cover_img)
+            # Display original images
 
-        watermark_gray = convert_to_grayscale(watermark_img)
+            col1, col2 = st.columns(2)
 
-        
+            with col1:
 
-        # Resize watermark to 256x256 and cover to 512x512
+                st.subheader("Cover Image (512x512)")
 
-        watermark_gray = rescale_image(watermark_gray, (256, 256))
+                st.image(cover_gray, use_container_width=True)
 
-        cover_gray = rescale_image(cover_gray, (512, 512))
+            
 
-        
+            with col2:
 
-        # Display original images
+                st.subheader("Watermark (256x256)")
 
-        col1, col2 = st.columns(2)
+                st.image(watermark_gray, use_container_width=True)
 
-        with col1:
+            
 
-            st.subheader("Cover Image (512x512)")
+            if st.button("Embed Watermark"):
 
-            st.image(cover_gray, use_container_width=True)
+                with st.spinner("Processing..."):
 
-        
+                    watermarked_img, key = embed_watermark(watermark_gray, cover_gray)
 
-        with col2:
+                    
 
-            st.subheader("Watermark (256x256)")
+                    if watermarked_img is not None:
 
-            st.image(watermark_gray, use_container_width=True)
+                        psnr = calculate_psnr(cover_gray, watermarked_img)
+
+                        
+
+                        st.subheader("Watermarked Image")
+
+                        st.image(watermarked_img.astype(np.uint8), use_container_width=True)
+
+                        
+
+                        if psnr is not None:
+
+                            st.write(f"PSNR: {psnr:.4f} dB")
 
 
             
