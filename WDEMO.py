@@ -246,7 +246,7 @@ def main():
             if selected_cover_image:
                 cover_img = cv2.imread(f"IMAGES/{selected_cover_image}")
         else:
-            uploaded_cover = st.file_uploader("Upload cover image", type=['png', 'jpg', 'jpeg'])
+            uploaded_cover = st.file_uploader("Upload cover image (512x512)", type=['png', 'jpg', 'jpeg'])
             if uploaded_cover:
                 cover_img = load_image_from_upload(uploaded_cover)
     
@@ -261,7 +261,7 @@ def main():
             if selected_watermark_image:
                 watermark_img = cv2.imread(f"watermarks/{selected_watermark_image}")
         else:
-            uploaded_watermark = st.file_uploader("Upload watermark image", type=['png', 'jpg', 'jpeg'])
+            uploaded_watermark = st.file_uploader("Upload watermark image (256x256)", type=['png', 'jpg', 'jpeg'])
             if uploaded_watermark:
                 watermark_img = load_image_from_upload(uploaded_watermark)
     
