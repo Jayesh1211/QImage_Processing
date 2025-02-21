@@ -21,21 +21,12 @@ class ImageProcessor:
     
     @staticmethod
     def rescale_image(img, size):
-        """
-        Rescale image to specified size using Lanczos interpolation
-        Args:
-            img: Input image
-            size: Target size tuple (width, height)
-        """
+        """Rescale image to specified size using Lanczos interpolation"""
         return cv2.resize(img, size, interpolation=cv2.INTER_LANCZOS4)
     
     @staticmethod
     def load_image_from_upload(uploaded_file):
-        """
-        Convert uploaded file to OpenCV image
-        Args:
-            uploaded_file: Streamlit uploaded file object
-        """
+        """Convert uploaded file to OpenCV image"""
         file_bytes = np.asarray(bytearray(uploaded_file.read()), dtype=np.uint8)
         return cv2.imdecode(file_bytes, cv2.IMREAD_COLOR)
 
@@ -49,12 +40,7 @@ class QuantumOperations:
     
     @staticmethod
     def CNOT(x, y):
-        """
-        Quantum CNOT gate implementation
-        Args:
-            x: Control bit
-            y: Target bit
-        """
+        """Quantum CNOT gate implementation"""
         return QuantumOperations.NOT(y) if x == "1" else y
 
 class ChaosGenerator:
@@ -62,12 +48,7 @@ class ChaosGenerator:
     
     @staticmethod
     def tent(x, d):
-        """
-        Tent map function for chaos generation
-        Args:
-            x: Input value
-            d: Control parameter
-        """
+        """Tent map function for chaos generation"""
         if 0 <= x < d:
             return x/d
         elif d <= x < 1:
@@ -81,13 +62,7 @@ class ChaosGenerator:
     
     @staticmethod
     def generate_chaos_matrix(size):
-        """
-        Generate chaos matrix for encryption
-        Args:
-            size: Size of the matrix to generate
-        Returns:
-            Tuple of (chaos matrix, initial code)
-        """
+        """Generate chaos matrix for encryption"""
         M = np.zeros((size, size), dtype=object)
         codem = random.uniform(0, 1)
         var = codem
@@ -106,12 +81,7 @@ class WatermarkProcessor:
     
     @staticmethod
     def process_watermark(watermark_gray, cover_gray_256):
-        """
-        Process watermark using SVD
-        Args:
-            watermark_gray: Grayscale watermark image
-            cover_gray_256: 256x256 grayscale cover image
-        """
+        """Process watermark using SVD"""
         # SVD Process
         A = watermark_gray.astype(float)
         I = cover_gray_256.astype(float)
@@ -146,12 +116,7 @@ class WatermarkProcessor:
     
     @staticmethod
     def embed_watermark(watermark_gray, cover_gray_512):
-        """
-        Embed watermark into cover image
-        Args:
-            watermark_gray: Grayscale watermark image
-            cover_gray_512: 512x512 grayscale cover image
-        """
+        """Embed watermark into cover image"""
         # Create 256x256 version of cover image
         cover_gray_256 = ImageProcessor.rescale_image(cover_gray_512, WATERMARK_SIZE)
         
@@ -228,12 +193,7 @@ class Metrics:
     
     @staticmethod
     def calculate_psnr(original, watermarked):
-        """
-        Calculate Peak Signal-to-Noise Ratio
-        Args:
-            original: Original image
-            watermarked: Watermarked image
-        """
+        """Calculate Peak Signal-to-Noise Ratio"""
         mse = np.mean((original - watermarked) ** 2)
         if mse == 0:
             return float('inf')
@@ -241,7 +201,7 @@ class Metrics:
         return 20 * math.log10(max_pixel / math.sqrt(mse))
 
 class StreamlitInterface:
-    """Handles the Streamlit user interface"""
+    """Handles the Streamlit user interface with enhanced styling"""
     
     def __init__(self):
         self.cover_image_options = [
@@ -251,96 +211,167 @@ class StreamlitInterface:
         self.watermark_image_options = [
             "Watermark_1.jpg", "watermark_2.png", "watermark_3.png"
         ]
+        self.setup_page()
+    
+    def setup_page(self):
+        """Configure page settings and styling"""
+        st.set_page_config(
+            page_title="Quantum Watermarking System",
+            page_icon="🔒",
+            layout="wide"
+        )
+        
+        # Custom CSS
+        st.markdown("""
+            <style>
+                .stApp {
+                    background: linear-gradient(to bottom right, #f5f7fa, #e3eeff);
+                }
+                .main {
+                    padding: 2rem;
+                }
+                .stButton>button {
+                    width: 100%;
+                    border-radius: 10px;
+                    background-color: #4CAF50;
+                    color: white;
+                    padding: 0.75rem;
+                    margin: 1rem 0;
+                }
+                .stButton>button:hover {
+                    background-color: #45a049;
+                }
+                h1 {
+                    color: #1E3D59;
+                    text-align: center;
+                    padding: 1.5rem 0;
+                    border-bottom: 2px solid #1E3D59;
+                    margin-bottom: 2rem;
+                }
+                h2 {
+                    color: #1E3D59;
+                    margin: 1rem 0;
+                }
+                .metrics-box {
+                    background-color: white;
+                    padding: 1.5rem;
+                    border-radius: 10px;
+                    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+                    margin: 1rem 0;
+                }
+            </style>
+        """, unsafe_allow_html=True)
     
     def render(self):
         """Render the Streamlit interface"""
-        st.title("Two-Step Hybrid Quantum Watermarking System")
-        st.write("Select or upload a cover image and a watermark to embed.")
+        st.markdown("<h1>🔒 Two-Step Hybrid Quantum Watermarking System</h1>", unsafe_allow_html=True)
         
-        # Create two-column layout
+        st.info("""
+            This system uses quantum computing principles and chaos theory to securely embed 
+            watermarks into images. Select or upload your images below to begin.
+        """)
+        
         col1, col2 = st.columns(2)
         
-        # Handle cover image selection
-        cover_img = self._handle_cover_image(col1)
+        with col1:
+            st.markdown("<h2>📄 Cover Image</h2>", unsafe_allow_html=True)
+            tab1, tab2 = st.tabs(["📚 Library", "⬆️ Upload"])
+            
+            with tab1:
+                selected_cover = st.selectbox(
+                    "Choose from available images:",
+                    self.cover_image_options,
+                    key="cover_lib"
+                )
+                cover_img = cv2.imread(f"IMAGES/{selected_cover}") if selected_cover else None
+                
+            with tab2:
+                uploaded_cover = st.file_uploader(
+                    "Upload cover image (512x512)",
+                    type=['png', 'jpg', 'jpeg'],
+                    key="cover_upload"
+                )
+                cover_img = ImageProcessor.load_image_from_upload(uploaded_cover) if uploaded_cover else None
         
-        # Handle watermark selection
-        watermark_img = self._handle_watermark(col2)
+        with col2:
+            st.markdown("<h2>💧 Watermark</h2>", unsafe_allow_html=True)
+            tab1, tab2 = st.tabs(["📚 Library", "⬆️ Upload"])
+            
+            with tab1:
+                selected_watermark = st.selectbox(
+                    "Choose from available watermarks:",
+                    self.watermark_image_options,
+                    key="watermark_lib"
+                )
+                watermark_img = cv2.imread(f"watermarks/{selected_watermark}") if selected_watermark else None
+                
+            with tab2:
+                uploaded_watermark = st.file_uploader(
+                    "Upload watermark image (256x256)",
+                    type=['png', 'jpg', 'jpeg'],
+                    key="watermark_upload"
+                )
+                watermark_img = ImageProcessor.load_image_from_upload(uploaded_watermark) if uploaded_watermark else None
         
-        # Process images if both are available
         if cover_img is not None and watermark_img is not None:
-            self._process_images(cover_img, watermark_img)
-    
-    def _handle_cover_image(self, column):
-        """Handle cover image selection/upload"""
-        with column:
-            st.subheader("Cover Image")
-            cover_source = st.radio("Choose cover image source:", 
-                                  ["Select from library", "Upload custom image"])
-            
-            if cover_source == "Select from library":
-                selected_cover = st.selectbox("Choose a cover image", 
-                                            self.cover_image_options)
-                return cv2.imread(f"IMAGES/{selected_cover}") if selected_cover else None
-            else:
-                uploaded_cover = st.file_uploader("Upload cover image (512x512)", 
-                                                type=['png', 'jpg', 'jpeg'])
-                return ImageProcessor.load_image_from_upload(uploaded_cover) if uploaded_cover else None
-    
-    def _handle_watermark(self, column):
-        """Handle watermark selection/upload"""
-        with column:
-            st.subheader("Watermark")
-            watermark_source = st.radio("Choose watermark source:", 
-                                      ["Select from library", "Upload custom image"])
-            
-            if watermark_source == "Select from library":
-                selected_watermark = st.selectbox("Choose a watermark image", 
-                                                self.watermark_image_options)
-                return cv2.imread(f"watermarks/{selected_watermark}") if selected_watermark else None
-            else:
-                uploaded_watermark = st.file_uploader("Upload watermark image (256x256)", 
-                                                    type=['png', 'jpg', 'jpeg'])
-                return ImageProcessor.load_image_from_upload(uploaded_watermark) if uploaded_watermark else None
-    
-    def _process_images(self, cover_img, watermark_img):
-        """Process and display the images"""
-        try:
-            # Convert and resize images
-            cover_gray = ImageProcessor.convert_to_grayscale(cover_img)
-            watermark_gray = ImageProcessor.convert_to_grayscale(watermark_img)
-            
-            watermark_gray = ImageProcessor.rescale_image(watermark_gray, WATERMARK_SIZE)
-            cover_gray = ImageProcessor.rescale_image(cover_gray, COVER_IMAGE_SIZE)
-            
-            # Display original images
-            col3, col4 = st.columns(2)
-            with col3:
-                st.subheader("Cover Image (512x512)")
-                st.image(cover_gray, use_container_width=True)
-            
-            with col4:
-                st.subheader("Watermark (256x256)")
-                st.image(watermark_gray, use_container_width=True)
-            
-            # Process watermark embedding
-            if st.button("Embed Watermark"):
-                with st.spinner("Processing..."):
-                    watermarked_img, key, codem, imCbinary = WatermarkProcessor.embed_watermark(
-                        watermark_gray, cover_gray
-                    )
-                    
-                    if watermarked_img is not None:
-                        psnr = Metrics.calculate_psnr(cover_gray, watermarked_img)
+            try:
+                cover_gray = ImageProcessor.convert_to_grayscale(cover_img)
+                watermark_gray = ImageProcessor.convert_to_grayscale(watermark_img)
+                
+                watermark_gray = ImageProcessor.rescale_image(watermark_gray, WATERMARK_SIZE)
+                cover_gray = ImageProcessor.rescale_image(cover_gray, COVER_IMAGE_SIZE)
+                
+                col3, col4 = st.columns(2)
+                with col3:
+                    st.markdown("<h3>Original Cover Image</h3>", unsafe_allow_html=True)
+                    st.image(cover_gray, use_column_width=True)
+                
+                with col4:
+                    st.markdown("<h3>Watermark Image</h3>", unsafe_allow_html=True)
+                    st.image(watermark_gray, use_column_width=True)
+                
+                if st.button("🔒 Embed Watermark", key="process_btn"):
+                    with st.spinner("🔄 Processing... Please wait..."):
+                        watermarked_img, key, codem, imCbinary = WatermarkProcessor.embed_watermark(
+                            watermark_gray, cover_gray
+                        )
                         
-                        st.subheader("Watermarked Image")
-                        st.image(watermarked_img.astype(np.uint8), use_container_width=True)
-                        
-                        if psnr is not None:
-                            st.write(f"PSNR: {psnr:.4f} dB")
+                        if watermarked_img is not None:
+                            psnr = Metrics.calculate_psnr(cover_gray, watermarked_img)
+                            
+                            st.markdown("<h3>🎯 Results</h3>", unsafe_allow_html=True)
+                            st.image(watermarked_img.astype(np.uint8), 
+                                    caption="Watermarked Image",
+                                    use_column_width=True)
+                            
+                            with st.container():
+                                st.markdown("""
+                                    <div class='metrics-box'>
+                                        <h3>📊 Quality Metrics</h3>
+                                    </div>
+                                """, unsafe_allow_html=True)
+                                
+                                if psnr is not None:
+                                    quality_level = "Excellent" if psnr > 40 else "Good" if psnr > 30 else "Fair"
+                                    st.metric(
+                                        label="Peak Signal-to-Noise Ratio (PSNR)",
+                                        value=f"{psnr:.2f} dB",
+                                        delta=quality_level
+                                    )
+                            
+                        # Add download button for watermarked image
+                        st.download_button(
+                            label="📥 Download Watermarked Image",
+                            data=cv2.imencode('.png', watermarked_img.astype(np.uint8))[1].tobytes(),
+                            file_name="watermarked_image.png",
+                            mime="image/png"
+                        )
         
         except Exception as e:
-            st.error(f"An error occurred: {str(e)}")
+            st.error(f"❌ An error occurred: {str(e)}")
             st.error("Please ensure both images are valid and try again.")
+
+# [Rest of the code remains the same]
 
 def main():
     """Main application entry point"""
