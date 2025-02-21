@@ -298,12 +298,7 @@ def main():
                         if psnr is not None:
                             st.write(f"PSNR: {psnr:.4f} dB")
                         
-                        # Add extraction option
-                        if st.button("Extract Watermark"):
-                            with st.spinner("Extracting watermark..."):
-                                extracted_watermark = extract_watermark(cover_gray, key, imCbinary, codem)
-                                st.subheader("Extracted Watermark")
-                                st.image(extracted_watermark.astype(np.uint8), use_container_width=True)
+                       
         
         except Exception as e:
             st.error(f"An error occurred: {str(e)}")
