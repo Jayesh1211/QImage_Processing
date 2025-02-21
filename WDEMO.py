@@ -196,7 +196,7 @@ def extract_watermark(cover_gray_512, key, imCbinary, codem):
     return IMGx
 
 def main():
-    st.title("Digital Image Watermarking")
+    st.title("A Novel Two-Step Hybrid Quantum Watermarking Technique")
     st.write("Select a cover image and a watermark to embed.")
     
     # Dropdown for selecting cover images
