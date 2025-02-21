@@ -337,6 +337,8 @@ class StreamlitInterface:
                         
                         if psnr is not None:
                             st.write(f"PSNR: {psnr:.4f} dB")
+
+
         
         except Exception as e:
             st.error(f"An error occurred: {str(e)}")
