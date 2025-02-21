@@ -200,6 +200,7 @@ class Metrics:
         max_pixel = 255.0
         return 20 * math.log10(max_pixel / math.sqrt(mse))
 
+
 class StreamlitInterface:
     """Handles the Streamlit user interface with enhanced styling"""
     
@@ -252,6 +253,17 @@ class StreamlitInterface:
                     color: #1E3D59;
                     margin: 1rem 0;
                 }
+                .stRadio > label {
+                    padding: 0.5rem;
+                    border-radius: 5px;
+                    background-color: #f8f9fa;
+                    margin: 0.5rem 0;
+                }
+                .status-box {
+                    padding: 1rem;
+                    border-radius: 10px;
+                    margin: 1rem 0;
+                }
                 .metrics-box {
                     background-color: white;
                     padding: 1.5rem;
@@ -263,19 +275,42 @@ class StreamlitInterface:
         """, unsafe_allow_html=True)
     
     def render(self):
-        """Render the Streamlit interface"""
-        st.markdown("<h1>🔒 Two-Step Hybrid Quantum Watermarking System</h1>", unsafe_allow_html=True)
+        """Render the enhanced Streamlit interface"""
+        # Header with icon and description
+        st.markdown("""
+            <h1>🔒 Two-Step Hybrid Quantum Watermarking System</h1>
+        """, unsafe_allow_html=True)
         
+        # Info box with system description
         st.info("""
             This system uses quantum computing principles and chaos theory to securely embed 
             watermarks into images. Select or upload your images below to begin.
         """)
         
-        col1, col2 = st.columns(2)
-        
-        with col1:
-            st.markdown("<h2>📄 Cover Image</h2>", unsafe_allow_html=True)
-            tab1, tab2 = st.tabs(["📚 Library", "⬆️ Upload"])
+        # Main content container
+        with st.container():
+            # Image selection columns
+            col1, col2 = st.columns(2)
+            
+            # Handle cover image selection
+            cover_img = self._handle_cover_image(col1)
+            
+            # Handle watermark selection
+            watermark_img = self._handle_watermark(col2)
+            
+            # Process images if both are available
+            if cover_img is not None and watermark_img is not None:
+                self._process_images(cover_img, watermark_img)
+    
+    def _handle_cover_image(self, column):
+        """Handle cover image selection/upload with enhanced UI"""
+        with column:
+            st.markdown("""
+                <h2>📄 Cover Image</h2>
+            """, unsafe_allow_html=True)
+            
+            # Create tabs for selection methods
+            tab1, tab2 = st.tabs(["📚 Select from Library", "⬆️ Upload Custom"])
             
             with tab1:
                 selected_cover = st.selectbox(
@@ -283,19 +318,28 @@ class StreamlitInterface:
                     self.cover_image_options,
                     key="cover_lib"
                 )
-                cover_img = cv2.imread(f"IMAGES/{selected_cover}") if selected_cover else None
+                return cv2.imread(f"IMAGES/{selected_cover}") if selected_cover else None
                 
             with tab2:
                 uploaded_cover = st.file_uploader(
-                    "Upload cover image (512x512)",
+                    "Upload your cover image (512x512)",
                     type=['png', 'jpg', 'jpeg'],
                     key="cover_upload"
                 )
-                cover_img = ImageProcessor.load_image_from_upload(uploaded_cover) if uploaded_cover else None
-        
-        with col2:
-            st.markdown("<h2>💧 Watermark</h2>", unsafe_allow_html=True)
-            tab1, tab2 = st.tabs(["📚 Library", "⬆️ Upload"])
+                if uploaded_cover:
+                    st.success("✅ Cover image uploaded successfully!")
+                    return ImageProcessor.load_image_from_upload(uploaded_cover)
+                return None
+    
+    def _handle_watermark(self, column):
+        """Handle watermark selection/upload with enhanced UI"""
+        with column:
+            st.markdown("""
+                <h2>💧 Watermark</h2>
+            """, unsafe_allow_html=True)
+            
+            # Create tabs for selection methods
+            tab1, tab2 = st.tabs(["📚 Select from Library", "⬆️ Upload Custom"])
             
             with tab1:
                 selected_watermark = st.selectbox(
@@ -303,62 +347,82 @@ class StreamlitInterface:
                     self.watermark_image_options,
                     key="watermark_lib"
                 )
-                watermark_img = cv2.imread(f"watermarks/{selected_watermark}") if selected_watermark else None
+                return cv2.imread(f"watermarks/{selected_watermark}") if selected_watermark else None
                 
             with tab2:
                 uploaded_watermark = st.file_uploader(
-                    "Upload watermark image (256x256)",
+                    "Upload your watermark image (256x256)",
                     type=['png', 'jpg', 'jpeg'],
                     key="watermark_upload"
                 )
-                watermark_img = ImageProcessor.load_image_from_upload(uploaded_watermark) if uploaded_watermark else None
-        
-        if cover_img is not None and watermark_img is not None:
-            try:
-                cover_gray = ImageProcessor.convert_to_grayscale(cover_img)
-                watermark_gray = ImageProcessor.convert_to_grayscale(watermark_img)
-                
-                watermark_gray = ImageProcessor.rescale_image(watermark_gray, WATERMARK_SIZE)
-                cover_gray = ImageProcessor.rescale_image(cover_gray, COVER_IMAGE_SIZE)
-                
-                col3, col4 = st.columns(2)
-                with col3:
-                    st.markdown("<h3>Original Cover Image</h3>", unsafe_allow_html=True)
-                    st.image(cover_gray, use_column_width=True)
-                
-                with col4:
-                    st.markdown("<h3>Watermark Image</h3>", unsafe_allow_html=True)
-                    st.image(watermark_gray, use_column_width=True)
-                
-                if st.button("🔒 Embed Watermark", key="process_btn"):
-                    with st.spinner("🔄 Processing... Please wait..."):
-                        watermarked_img, key, codem, imCbinary = WatermarkProcessor.embed_watermark(
-                            watermark_gray, cover_gray
-                        )
+                if uploaded_watermark:
+                    st.success("✅ Watermark uploaded successfully!")
+                    return ImageProcessor.load_image_from_upload(uploaded_watermark)
+                return None
+    
+    def _process_images(self, cover_img, watermark_img):
+        """Process and display the images with enhanced visualization"""
+        try:
+            # Convert and resize images
+            cover_gray = ImageProcessor.convert_to_grayscale(cover_img)
+            watermark_gray = ImageProcessor.convert_to_grayscale(watermark_img)
+            
+            watermark_gray = ImageProcessor.rescale_image(watermark_gray, WATERMARK_SIZE)
+            cover_gray = ImageProcessor.rescale_image(cover_gray, COVER_IMAGE_SIZE)
+            
+            # Create three columns for image display
+            col1, col2 = st.columns(2)
+            
+            # Display original images with enhanced styling
+            with col1:
+                st.markdown("""
+                    <h2>📄 Cover Image (512x512)</h2>
+                """, unsafe_allow_html=True)
+                st.image(cover_gray, use_column_width=True)
+            
+            with col2:
+                st.markdown("""
+                    <h2>💧 Watermark (256x256)</h2>
+                """, unsafe_allow_html=True)
+                st.image(watermark_gray, use_column_width=True)
+            
+            # Add processing button with spinner
+            if st.button("🔒 Embed Watermark", key="process_btn"):
+                with st.spinner("🔄 Processing... Please wait..."):
+                    watermarked_img, key, codem, imCbinary = WatermarkProcessor.embed_watermark(
+                        watermark_gray, cover_gray
+                    )
+                    
+                    if watermarked_img is not None:
+                        # Calculate PSNR
+                        psnr = Metrics.calculate_psnr(cover_gray, watermarked_img)
                         
-                        if watermarked_img is not None:
-                            psnr = Metrics.calculate_psnr(cover_gray, watermarked_img)
+                        # Display results in an organized layout
+                        st.markdown("""
+                            <h2>🎯 Results</h2>
+                        """, unsafe_allow_html=True)
+                        
+                        # Display watermarked image
+                        st.image(watermarked_img.astype(np.uint8), 
+                                caption="Watermarked Image",
+                                use_column_width=True)
+                        
+                        # Display metrics in a styled box
+                        with st.container():
+                            st.markdown("""
+                                <div class='metrics-box'>
+                                    <h3>📊 Quality Metrics</h3>
+                                </div>
+                            """, unsafe_allow_html=True)
                             
-                            st.markdown("<h3>🎯 Results</h3>", unsafe_allow_html=True)
-                            st.image(watermarked_img.astype(np.uint8), 
-                                    caption="Watermarked Image",
-                                    use_column_width=True)
-                            
-                            with st.container():
-                                st.markdown("""
-                                    <div class='metrics-box'>
-                                        <h3>📊 Quality Metrics</h3>
-                                    </div>
-                                """, unsafe_allow_html=True)
-                                
-                                if psnr is not None:
-                                    quality_level = "Excellent" if psnr > 40 else "Good" if psnr > 30 else "Fair"
-                                    st.metric(
-                                        label="Peak Signal-to-Noise Ratio (PSNR)",
-                                        value=f"{psnr:.2f} dB",
-                                        delta=quality_level
-                                    )
-                            
+                            if psnr is not None:
+                                quality_level = "Excellent" if psnr > 40 else "Good" if psnr > 30 else "Fair"
+                                st.metric(
+                                    label="Peak Signal-to-Noise Ratio (PSNR)",
+                                    value=f"{psnr:.2f} dB",
+                                    delta=quality_level
+                                )
+                        
                         # Add download button for watermarked image
                         st.download_button(
                             label="📥 Download Watermarked Image",
