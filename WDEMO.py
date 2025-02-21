@@ -4,14 +4,18 @@ import cv2
 import random
 import math
 from scipy import linalg
+from io import BytesIO
 
 def convert_to_grayscale(image):
+    """Convert BGR image to grayscale"""
     return cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
 
 def rescale_image(img, size):
+    """Rescale image to specified size using Lanczos interpolation"""
     return cv2.resize(img, size, interpolation=cv2.INTER_LANCZOS4)
 
 def tent(x, d):
+    """Tent map function for chaos generation"""
     if 0 <= x < d:
         return x/d
     elif d <= x < 1:
@@ -19,15 +23,19 @@ def tent(x, d):
     return 0
 
 def decimalToBinary(n):
+    """Convert decimal to 2-bit binary string"""
     return "{0:02b}".format(int(n))
 
 def NOT(x):
+    """Quantum NOT gate implementation"""
     return "1" if x == "0" else "0"
 
 def CNOT(x, y):
+    """Quantum CNOT gate implementation"""
     return NOT(y) if x == "1" else y
 
 def process_watermark(watermark_gray, cover_gray_256):
+    """Process watermark using SVD"""
     # SVD Process
     A = watermark_gray.astype(float)
     I = cover_gray_256.astype(float)
@@ -62,6 +70,7 @@ def process_watermark(watermark_gray, cover_gray_256):
     return AwF
 
 def generate_chaos_matrix(size):
+    """Generate chaos matrix for encryption"""
     M = np.zeros((size, size), dtype=object)
     codem = random.uniform(0, 1)
     var = codem
@@ -76,6 +85,7 @@ def generate_chaos_matrix(size):
     return M, codem
 
 def embed_watermark(watermark_gray, cover_gray_512):
+    """Embed watermark into cover image"""
     # Create 256x256 version of cover image for first stage
     cover_gray_256 = rescale_image(cover_gray_512, (256, 256))
     
@@ -133,9 +143,10 @@ def embed_watermark(watermark_gray, cover_gray_512):
             except ValueError:
                 IMG[i,j] = 0
     
-    return IMG, key
-    
+    return IMG, key, codem, imCbinary
+
 def calculate_psnr(original, watermarked):
+    """Calculate Peak Signal-to-Noise Ratio"""
     mse = np.mean((original - watermarked) ** 2)
     if mse == 0:
         return float('inf')
@@ -144,6 +155,7 @@ def calculate_psnr(original, watermarked):
     return psnr
 
 def extract_watermark(cover_gray_512, key, imCbinary, codem):
+    """Extract watermark from watermarked image"""
     a = (512, 512)
     KY = np.copy(key)
     imp = np.zeros(a, dtype=object)
@@ -160,7 +172,7 @@ def extract_watermark(cover_gray_512, key, imCbinary, codem):
     for j in range(512):
         for i in range(512):
             x = varx
-            y = tent(x, 1)  # Assuming d=1 for tent function
+            y = tent(x, 1)
             varx = y
             CME[i][j] = decimalToBinary((math.ceil(varx * (10 ** 9))) % 4)
 
@@ -174,7 +186,6 @@ def extract_watermark(cover_gray_512, key, imCbinary, codem):
                     l[k] = NOT(l[k])
                     IMB[i, j] = "".join(l)
 
-    # IMB is the scrambled watermarked image
     ab = (256, 256)
     imb = np.zeros(ab, dtype=object)
     l = 0
@@ -195,11 +206,17 @@ def extract_watermark(cover_gray_512, key, imCbinary, codem):
 
     return IMGx
 
+def load_image_from_upload(uploaded_file):
+    """Convert uploaded file to OpenCV image"""
+    file_bytes = np.asarray(bytearray(uploaded_file.read()), dtype=np.uint8)
+    image = cv2.imdecode(file_bytes, cv2.IMREAD_COLOR)
+    return image
+
 def main():
-    st.title("A Novel Two-Step Hybrid Quantum Watermarking Technique")
-    st.write("Select a cover image and a watermark to embed.")
+    st.title("Two-Step Hybrid Quantum Watermarking System")
+    st.write("Select or upload a cover image and a watermark to embed.")
     
-    # Dropdown for selecting cover images
+    # Predefined image options
     cover_image_options = [
         "australia.png",
         "Boat.png",
@@ -215,18 +232,41 @@ def main():
         "watermark_3.png"
     ]
     
-    selected_cover_image = st.selectbox("Choose a cover image", cover_image_options)
-    selected_watermark_image = st.selectbox("Choose a watermark image", watermark_image_options)
+    # Image source selection
+    col1, col2 = st.columns(2)
     
-    if selected_cover_image and selected_watermark_image:
+    with col1:
+        st.subheader("Cover Image")
+        cover_source = st.radio("Choose cover image source:", ["Select from library", "Upload custom image"])
+        
+        # Cover image handling
+        cover_img = None
+        if cover_source == "Select from library":
+            selected_cover_image = st.selectbox("Choose a cover image", cover_image_options)
+            if selected_cover_image:
+                cover_img = cv2.imread(f"IMAGES/{selected_cover_image}")
+        else:
+            uploaded_cover = st.file_uploader("Upload cover image", type=['png', 'jpg', 'jpeg'])
+            if uploaded_cover:
+                cover_img = load_image_from_upload(uploaded_cover)
+    
+    with col2:
+        st.subheader("Watermark")
+        watermark_source = st.radio("Choose watermark source:", ["Select from library", "Upload custom image"])
+        
+        # Watermark image handling
+        watermark_img = None
+        if watermark_source == "Select from library":
+            selected_watermark_image = st.selectbox("Choose a watermark image", watermark_image_options)
+            if selected_watermark_image:
+                watermark_img = cv2.imread(f"watermarks/{selected_watermark_image}")
+        else:
+            uploaded_watermark = st.file_uploader("Upload watermark image", type=['png', 'jpg', 'jpeg'])
+            if uploaded_watermark:
+                watermark_img = load_image_from_upload(uploaded_watermark)
+    
+    if cover_img is not None and watermark_img is not None:
         try:
-            # Load images from the specified folders
-            cover_img_path = f"IMAGES/{selected_cover_image}"
-            watermark_img_path = f"watermarks/{selected_watermark_image}"
-            
-            cover_img = cv2.imread(cover_img_path)
-            watermark_img = cv2.imread(watermark_img_path)
-            
             # Convert to grayscale
             cover_gray = convert_to_grayscale(cover_img)
             watermark_gray = convert_to_grayscale(watermark_img)
@@ -236,18 +276,18 @@ def main():
             cover_gray = rescale_image(cover_gray, (512, 512))
             
             # Display original images
-            col1, col2 = st.columns(2)
-            with col1:
+            col3, col4 = st.columns(2)
+            with col3:
                 st.subheader("Cover Image (512x512)")
                 st.image(cover_gray, use_container_width=True)
             
-            with col2:
+            with col4:
                 st.subheader("Watermark (256x256)")
                 st.image(watermark_gray, use_container_width=True)
             
             if st.button("Embed Watermark"):
                 with st.spinner("Processing..."):
-                    watermarked_img, key = embed_watermark(watermark_gray, cover_gray)
+                    watermarked_img, key, codem, imCbinary = embed_watermark(watermark_gray, cover_gray)
                     
                     if watermarked_img is not None:
                         psnr = calculate_psnr(cover_gray, watermarked_img)
@@ -257,7 +297,13 @@ def main():
                         
                         if psnr is not None:
                             st.write(f"PSNR: {psnr:.4f} dB")
-
+                        
+                        # Add extraction option
+                        if st.button("Extract Watermark"):
+                            with st.spinner("Extracting watermark..."):
+                                extracted_watermark = extract_watermark(cover_gray, key, imCbinary, codem)
+                                st.subheader("Extracted Watermark")
+                                st.image(extracted_watermark.astype(np.uint8), use_container_width=True)
         
         except Exception as e:
             st.error(f"An error occurred: {str(e)}")
