@@ -337,7 +337,16 @@ class StreamlitInterface:
                         
                         if psnr is not None:
                             st.write(f"PSNR: {psnr:.4f} dB")
+                            ber = 1 / psnr if psnr != 0 else float('inf')
+                            st.write(f"Bit Error Rate (BER): {ber:.6f}")
 
+         
+                        col5= st.columns()
+                        with col5:
+                            st.subheader("Comparison Image")
+                            st.image("path/to/comparison_image.png", use_column_width=True)
+
+            
 
         
         except Exception as e:
