@@ -342,7 +342,7 @@ class StreamlitInterface:
 
          
                         st.subheader("Comparison Image")  # Change this to "Attacked Image" if needed
-                        st.image("Screenshot from 2025-03-15 09-45-44.png", use_column_width=True)
+                        st.image("Screenshot from 2025-03-15 09-45-44.png", use_container_width=True)
 
             
 
