@@ -315,11 +315,11 @@ class StreamlitInterface:
             # Display original images
             col3, col4 = st.columns(2)
             with col3:
-                st.subheader("Cover Image (512x512)")
+                st.subheader("Cover Image")
                 st.image(cover_gray, use_container_width=True)
             
             with col4:
-                st.subheader("Watermark (256x256)")
+                st.subheader("Watermark")
                 st.image(watermark_gray, use_container_width=True)
             
             # Process watermark embedding
