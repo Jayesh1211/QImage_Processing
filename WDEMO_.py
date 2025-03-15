@@ -336,7 +336,7 @@ class StreamlitInterface:
                         st.image(watermarked_img.astype(np.uint8), use_container_width=True)
                         
                         if psnr is not None:
-                            st.write(f"PSNR: {psnr:.4f} dB")
+                            st.write(f"Peak Signal to Noise Ratio (PSNR): {psnr:.4f} dB")
                             ber = 1 / psnr if psnr != 0 else float('inf')
                             st.write(f"Bit Error Rate (BER): {ber:.6f}")
 
