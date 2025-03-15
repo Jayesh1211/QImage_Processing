@@ -344,7 +344,7 @@ class StreamlitInterface:
                         col5= st.columns()
                         with col5:
                             st.subheader("Comparison Image")
-                            st.image("path/to/comparison_image.png", use_column_width=True)
+                            st.image("Screenshot from 2025-03-15 09-45-44.png", use_column_width=True)
 
             
 
