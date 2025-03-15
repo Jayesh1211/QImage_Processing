@@ -341,7 +341,7 @@ class StreamlitInterface:
                             st.write(f"Bit Error Rate (BER): {ber:.6f}")
 
          
-                        col5= st.columns()
+                        col5= st.columns(1)
                         with col5:
                             st.subheader("Comparison Image")
                             st.image("Screenshot from 2025-03-15 09-45-44.png", use_column_width=True)
